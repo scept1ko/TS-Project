@@ -1,0 +1,97 @@
+---
+title: "MTH6139 Time Series" 
+subtitle: "Coursework 1 -- Forecasting FTSE Index with Prophet" 
+author: "Mikail Evloev" 
+date: "Spring term 2025" 
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: spacelab 
+    highlight: tango
+---
+ 
+```{r, echo=FALSE}
+# This code will display the QMUL logo at the top right of the page
+# Do not change this code
+htmltools::img(src = knitr::image_uri("images/QMlogo.png"),
+               alt = 'logo',
+               style = 'position:absolute; top:0; right:0; padding:10px; width:20%;')
+```
+
+# Section 1: Introduction
+I am demonstrating how to use Meta's Prophet forecasting library to forecast and analyse underlying trends of the FTSE stock market index using the built-in EuStockMarkets dataset in R, which can reveal long-term movement seperate from seasonal fluctuations.
+
+
+## 1.1 Loading the Libraries
+```{r}
+library(prophet)
+library(zoo)
+```
+
+
+## 1.2 Data Preparation
+The EuStockMarkets dataset includes daily closing prices for major European stock market indices. We'll forecast the FTSE index specifically. I am firstly creating business days because the original EuStockMarkets dataset doesn't include explicit date labels and Prophet requires clear date-time stamps (e.g., actual calendar dates). It only provides numeric time indices. 
+
+```{r}
+# EuStockMarkets contains weekday data
+# Create proper business dates
+start_date <- as.Date("1991-07-01")
+end_date <- start_date + nrow(EuStockMarkets) * 7/5 # Approximate end
+dates <- seq(start_date, end_date, by="day")
+
+# Keep only business days (Monday to Friday)
+dates <- dates[!weekdays(dates) %in% c("Saturday", "Sunday")]
+dates <- dates[1:nrow(EuStockMarkets)]
+
+# Convert EuStockMarkets to a data frame
+eu_stocks <- as.data.frame(EuStockMarkets)
+
+# Prepare dataframe for Prophet
+EuStocksMarkets.df <- data.frame(
+    ds = dates,
+    y = eu_stocks$FTSE
+)
+```
+
+## 1.3 Forecasting with Prophet
+We fit a Prophet model to forecast the FTSE index.
+```{r}
+m <- prophet::prophet(EuStocksMarkets.df)
+f <- prophet::make_future_dataframe(m, periods=8, freq="week")
+p <- predict(m, f)
+```
+
+# Section 2: Displaying Plots(Visualisations)
+
+## 2.1 Forecast Plot
+Let's visualize the forecast and its components.
+
+```{r}
+# Plotting the forecast
+plot(m, p)
+```
+
+## Interpretation 
+
+### Forecast plot
+
+The plot displays historical data and the predicted future trend, showing an upward trajectory, indicating continued growth, along with shaded areas reflecting uncertainty intervals around the forecasted values. The increasing trend suggests a positive outlook for the series, assuming existing patterns persist into the future
+
+
+## 2.2 Seasonal components and Trend Plot
+```{r}
+# Plotting trend and seasonal components
+prophet::prophet_plot_components(m, p)
+```
+
+## Interpretation
+### Trend Analysis
+The FTSE index shows a strong upward trend from 1991 to 1998, reflecting the broader economic expansion during this period following the UK recession of the early 1990s. The trend line also steepens noticeably around 1995-1996, which can suggest an increase in market growth that might correspond to increased economic confidence in the UK at that period.
+
+
+### Seasonality Patterns
+Weekly seasonality clearly shows reduced values during weekends, particularly low on Sundays and Saturdays, and stable high levels on weekdays.
+Yearly seasonality reveals cyclical patterns throughout the year, with peaks around early spring and autumn, and lows during mid-year (summer months)
+
+
